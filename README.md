@@ -42,10 +42,10 @@ Update interval can be changed with scan_interval and seconds like this to updat
 For a list of transactions in Lovelace the markdown card can be used with a template like this:
 ```
 {%- for transaction in state_attr('sensor.nameofaccount_21212121212', 'transactions') or [] %}
-  {{ transaction.accountingDate[:10] }} | {{ transaction.amount }} kr | {{ transaction.text[:40] }}
+  {{ transaction.accountingDate[:10] }} | {{ transaction.amount }} kr | {% if (transaction.isReservation == True) %} Reservert: {{ transaction.text[:30] }}  {% else %} {{ transaction.text[:40] }} {% endif %} 
 {%- endfor %}
 ```
-The ```[:10]``` shows the first 10 chars of date and ```[:40]``` the first 40 chars of transaction text.
+The ```[:10]``` shows the first 10 chars of date and ```[:40]``` the first 40 chars of transaction text. 'Reservert:' is added to the text when isReservation == True just like it is displayed on Sbanken.no.
 
 
 That's it! You can now use your brand new Sbanken sensor.
