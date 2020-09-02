@@ -33,7 +33,7 @@ sensor:
       numberOfTransactions: 5
 ```
 
-numberOfTransactions is optional (default is 3)
+numberOfTransactions is optional (default is 3).
 Update interval can be changed with scan_interval and seconds like this to update every 30 minutes:
 ```yaml
       scan_interval: 1800
