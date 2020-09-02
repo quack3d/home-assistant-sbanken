@@ -1,8 +1,8 @@
 {
     "domain": "sbanken",
     "name": "Sbanken",
-    "documentation": "https://github.com/toringer/home-assistant-sbanken",
+    "documentation": "https://github.com/sepodele/home-assistant-sbanken",
     "requirements": [],
     "dependencies": [],
-    "codeowners": ["@toringer"]
+    "codeowners": ["@sepodele"]
 }

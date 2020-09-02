@@ -37,27 +37,18 @@ ATTR_ACCOUNT_TYPE = 'account_type'
 ATTR_ACCOUNT_LIMIT = 'credit_limit'
 ATTR_ACCOUNT_ID = 'account_id'
 
-ATTR_AMOUNT = 'amount'
-ATTR_FROM_ACCOUNT = 'from_account'
-ATTR_TO_ACCOUNT = 'to_account'
-ATTR_MESSAGE = 'message'
-
-SERVICE_SCHEMA = vol.Schema({
-    vol.Required(ATTR_FROM_ACCOUNT): cv.string,
-    vol.Required(ATTR_TO_ACCOUNT): cv.string,
-    vol.Required(ATTR_AMOUNT): vol.Coerce(float),
-    vol.Required(ATTR_MESSAGE): cv.string,
-})
-
+ATTR_TRANSACTIONS = 'transactions'
 
 CONF_CUSTOMER_ID = 'customer_id'
 CONF_CLIENT_ID = 'client_id'
 CONF_SECRET = 'secret'
+CONF_NUMBER_OF_TRANSACTIONS = 'numberOfTransactions'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_CUSTOMER_ID): cv.string,
     vol.Required(CONF_CLIENT_ID): cv.string,
     vol.Required(CONF_SECRET): cv.string,
+    vol.Optional(CONF_NUMBER_OF_TRANSACTIONS, default=3): cv.string,
     vol.Optional(CONF_SCAN_INTERVAL, default=SCAN_INTERVAL): cv.time_period,
 })
 
@@ -66,32 +57,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     _LOGGER.info("Setting up Sbanken Sensor Platform.")
 
-    api = SbankenApi(config.get(CONF_CUSTOMER_ID), config.get(CONF_CLIENT_ID), config.get(CONF_SECRET))
+    api = SbankenApi(config.get(CONF_CUSTOMER_ID), config.get(CONF_CLIENT_ID), config.get(CONF_SECRET), config)
     session = api.create_session()
-    accounts = api.get_accounts(session)
+    accounts = api.get_accounts(session) 
+    sensors = [SbankenSensor(account, config, api) for account in accounts] 
 
-    sensors = []
-    for account in accounts:
-        sensors.append(SbankenSensor(account, config, api))
-
-    add_devices(sensors)
-
-
-    def handleTransfer(service):
-        _LOGGER.info("handleTransfer")
-        amount = float(service.data.get(ATTR_AMOUNT))
-        from_account = service.data.get(ATTR_FROM_ACCOUNT)
-        to_account = service.data.get(ATTR_TO_ACCOUNT)
-        message = service.data.get(ATTR_MESSAGE)
-
-        session = api.create_session()
-        api.transfer(session, from_account, to_account, amount, message)
-
-        """Update accounts"""
-        for sensor in sensors:
-            sensor.update()
-
-    hass.services.register(DOMAIN, "transfer", handleTransfer, schema=SERVICE_SCHEMA)
+    add_devices(sensors, update_before_add=True)
+    
     return True
     
     
@@ -103,6 +75,7 @@ class SbankenSensor(Entity):
         self.config = config
         self.api = api
         self._account = account
+        self._transactions = []
         self._state = account['available']
 
     @property
@@ -145,9 +118,9 @@ class SbankenSensor(Entity):
             ATTR_ACCOUNT_NUMBER: self._account['accountNumber'], 
             ATTR_NAME: self._account['name'], 
             ATTR_ACCOUNT_TYPE: self._account['accountType'], 
-            ATTR_ACCOUNT_LIMIT: self._account['creditLimit']
+            ATTR_ACCOUNT_LIMIT: self._account['creditLimit'],
+            ATTR_TRANSACTIONS: self._transactions          
             }
-
 
     def update(self):
         """Fetch new state data for the sensor.
@@ -156,22 +129,26 @@ class SbankenSensor(Entity):
         """
         session = self.api.create_session()
         account = self.api.get_account(session, self._account['accountId'])
+        transactions = self.api.get_transactions(session, self._account["accountId"]) 
+        for transaction in transactions:
+            transaction['randomGenNumber'] = randrange(1000000000000000,9999999999999999)
+        self._transactions = transactions
         self._account = account
         self._state = account['available']
-        self.schedule_update_ha_state()
+        _LOGGER.info("Updating Sbanken Sensors.")
 
 class SbankenApi(object):
     """Get the latest data and update the states."""
 
-    def __init__(self, customer_id, client_id, secret):
+    def __init__(self, customer_id, client_id, secret, config):
         """Initialize the data object."""
 
         self.customer_id = customer_id
         self.client_id = client_id
         self.secret = secret
         self.session = self.create_session()
-
-    
+        self.config = config
+ 
     def create_session(self):
 
         from requests_oauthlib import OAuth2Session
@@ -187,7 +164,6 @@ class SbankenApi(object):
         )
         return session
 
-
     def get_customer_information(self, session):
         response = session.get(
             "https://api.sbanken.no/exec.customers/api/v1/Customers/",
@@ -198,8 +174,6 @@ class SbankenApi(object):
             return response["item"]
         else:
             raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))
-
-
 
     def get_accounts(self, session):
         response = session.get(
@@ -223,18 +197,13 @@ class SbankenApi(object):
         else:
             raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))
 
-
-    def transfer(self, session, from_account_id, to_account_id, amount, message):
-        import json
-
-        payload = {'fromAccountId': from_account_id,
-            'toAccountId': to_account_id,
-            'message': message + " (HA)",
-            'amount': amount}
-
-        response = session.post(
-            "https://api.sbanken.no/exec.bank/api/v1/Transfers/", data=json.dumps(payload), headers={'customerId': self.customer_id, 'Content-type': 'application/json'}
+    def get_transactions(self, session, accountId):
+        response = session.get(
+            "https://api.sbanken.no/exec.bank/api/v1/Transactions/" + accountId + '?length=' + self.config.get(CONF_NUMBER_OF_TRANSACTIONS),
+            headers={'customerId': self.customer_id}
         ).json()
         
-        if response["isError"]:
-            raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))
+        if not response["isError"]:
+            return response["items"]
+        else:
+            raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))    
