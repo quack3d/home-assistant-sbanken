@@ -2,7 +2,7 @@
 Sbanken accounts sensor 
 
 For more details about this platform, please refer to the documentation at
-https://github.com/toringer/home-assistant-sbanken
+https://github.com/sepodele/home-assistant-sbanken
 
 """
 
