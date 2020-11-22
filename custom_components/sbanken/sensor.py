@@ -8,7 +8,6 @@ https://github.com/sepodele/home-assistant-sbanken
 
 import asyncio
 import logging
-import datetime
 import voluptuous as vol
 
 from random import randrange
@@ -19,15 +18,15 @@ from homeassistant.helpers.event import track_time_interval
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (CONF_SCAN_INTERVAL)
 
+from datetime import datetime, timedelta
 
 REQUIREMENTS = ['oauthlib==3.0.2', 'requests-oauthlib==1.2.0']
-
 
 _LOGGER = logging.getLogger(__name__)
 
 DOMAIN = 'sbanken'
 
-SCAN_INTERVAL = datetime.timedelta(minutes=20)
+SCAN_INTERVAL = timedelta(minutes=20)
 
 ATTR_AVAILABLE = 'available'
 ATTR_BALANCE = 'balance'
@@ -36,6 +35,7 @@ ATTR_NAME = 'name'
 ATTR_ACCOUNT_TYPE = 'account_type'
 ATTR_ACCOUNT_LIMIT = 'credit_limit'
 ATTR_ACCOUNT_ID = 'account_id'
+ATTR_LAST_UPDATE = 'last_update'
 
 ATTR_TRANSACTIONS = 'transactions'
 
@@ -119,6 +119,7 @@ class SbankenSensor(Entity):
             ATTR_NAME: self._account['name'], 
             ATTR_ACCOUNT_TYPE: self._account['accountType'], 
             ATTR_ACCOUNT_LIMIT: self._account['creditLimit'],
+            ATTR_LAST_UPDATE: datetime.now().strftime("%d/%m/%Y %H:%M:%S"),              
             ATTR_TRANSACTIONS: self._transactions          
             }
 
@@ -130,8 +131,6 @@ class SbankenSensor(Entity):
         session = self.api.create_session()
         account = self.api.get_account(session, self._account['accountId'])
         transactions = self.api.get_transactions(session, self._account["accountId"]) 
-        for transaction in transactions:
-            transaction['randomGenNumber'] = randrange(1000000000000000,9999999999999999)
         self._transactions = transactions
         self._account = account
         self._state = account['available']
