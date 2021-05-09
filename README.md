@@ -21,17 +21,18 @@ Restart your Home Assistant instance to load the component.
 ## Configuration
 
 1. Start by signing up for the [Sbanken API program](https://sbanken.no/bruke/utviklerportalen/). This is free and the only requirement is that you are over 18.
-2. Create an app in the developer portal. Store your Client ID somewhere and create a new password (secret).
+2. Create an app in the developer portal and select APIBeta as the scope. Store your Client ID somewhere and create a new password (secret).
 3. Configure the sensor in Home Assistant.
 
 ```yaml
 sensor:
     - platform: sbanken
-      customer_id: 01010012345
       client_id: yourClientId
       secret: yourSecret
       numberOfTransactions: 5
 ```
+
+Customer_id (national identity number) is no longer needed.
 
 numberOfTransactions is optional (default is 3).
 Update interval can be changed with scan_interval and seconds like this to update every 30 minutes:

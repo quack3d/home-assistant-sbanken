@@ -39,13 +39,11 @@ ATTR_LAST_UPDATE = 'last_update'
 
 ATTR_TRANSACTIONS = 'transactions'
 
-CONF_CUSTOMER_ID = 'customer_id'
 CONF_CLIENT_ID = 'client_id'
 CONF_SECRET = 'secret'
 CONF_NUMBER_OF_TRANSACTIONS = 'numberOfTransactions'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_CUSTOMER_ID): cv.string,
     vol.Required(CONF_CLIENT_ID): cv.string,
     vol.Required(CONF_SECRET): cv.string,
     vol.Optional(CONF_NUMBER_OF_TRANSACTIONS, default=3): cv.string,
@@ -57,7 +55,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
     _LOGGER.info("Setting up Sbanken Sensor Platform.")
 
-    api = SbankenApi(config.get(CONF_CUSTOMER_ID), config.get(CONF_CLIENT_ID), config.get(CONF_SECRET), config)
+    api = SbankenApi(config.get(CONF_CLIENT_ID), config.get(CONF_SECRET), config)
     session = api.create_session()
     accounts = api.get_accounts(session) 
     sensors = [SbankenSensor(account, config, api) for account in accounts] 
@@ -139,10 +137,9 @@ class SbankenSensor(Entity):
 class SbankenApi(object):
     """Get the latest data and update the states."""
 
-    def __init__(self, customer_id, client_id, secret, config):
+    def __init__(self, client_id, secret, config):
         """Initialize the data object."""
 
-        self.customer_id = customer_id
         self.client_id = client_id
         self.secret = secret
         self.session = self.create_session()
@@ -165,9 +162,7 @@ class SbankenApi(object):
 
     def get_customer_information(self, session):
         response = session.get(
-            "https://api.sbanken.no/exec.customers/api/v1/Customers/",
-            headers={'customerId': self.customer_id}
-        ).json()
+            "https://publicapi.sbanken.no/apibeta/api/v1/Customers/").json()
 
         if not response["isError"]:
             return response["item"]
@@ -176,9 +171,7 @@ class SbankenApi(object):
 
     def get_accounts(self, session):
         response = session.get(
-            "https://api.sbanken.no/exec.bank/api/v1/Accounts/",
-            headers={'customerId': self.customer_id}
-        ).json()
+            "https://publicapi.sbanken.no/apibeta/api/v1/Accounts/").json()
 
         if not response["isError"]:
             return response["items"]
@@ -187,9 +180,7 @@ class SbankenApi(object):
 
     def get_account(self, session, accountId):
         response = session.get(
-            "https://api.sbanken.no/exec.bank/api/v1/Accounts/{}".format(accountId),
-            headers={'customerId': self.customer_id}
-        ).json()
+            "https://publicapi.sbanken.no/apibeta/api/v1/Accounts/{}".format(accountId)).json()
 
         if not response["isError"]:
             return response['item']
@@ -198,9 +189,7 @@ class SbankenApi(object):
 
     def get_transactions(self, session, accountId):
         response = session.get(
-            "https://api.sbanken.no/exec.bank/api/v1/Transactions/" + accountId + '?length=' + self.config.get(CONF_NUMBER_OF_TRANSACTIONS),
-            headers={'customerId': self.customer_id}
-        ).json()
+            "https://publicapi.sbanken.no/apibeta/api/v1/Transactions/" + accountId + '?length=' + self.config.get(CONF_NUMBER_OF_TRANSACTIONS)).json()
         
         if not response["isError"]:
             return response["items"]
