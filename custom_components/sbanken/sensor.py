@@ -38,15 +38,18 @@ ATTR_ACCOUNT_ID = 'account_id'
 ATTR_LAST_UPDATE = 'last_update'
 
 ATTR_TRANSACTIONS = 'transactions'
+ATTR_PAYMENTS = 'payments'
 
 CONF_CLIENT_ID = 'client_id'
 CONF_SECRET = 'secret'
 CONF_NUMBER_OF_TRANSACTIONS = 'numberOfTransactions'
+CONF_NUMBER_OF_PAYMENTS = 'numberOfPayments'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_CLIENT_ID): cv.string,
     vol.Required(CONF_SECRET): cv.string,
     vol.Optional(CONF_NUMBER_OF_TRANSACTIONS, default=3): cv.string,
+    vol.Optional(CONF_NUMBER_OF_PAYMENTS, default=100): cv.string,
     vol.Optional(CONF_SCAN_INTERVAL, default=SCAN_INTERVAL): cv.time_period,
 })
 
@@ -74,6 +77,7 @@ class SbankenSensor(Entity):
         self.api = api
         self._account = account
         self._transactions = []
+        self._payments = []
         self._state = account['available']
 
     @property
@@ -118,7 +122,8 @@ class SbankenSensor(Entity):
             ATTR_ACCOUNT_TYPE: self._account['accountType'], 
             ATTR_ACCOUNT_LIMIT: self._account['creditLimit'],
             ATTR_LAST_UPDATE: datetime.now().strftime("%d/%m/%Y %H:%M:%S"),              
-            ATTR_TRANSACTIONS: self._transactions          
+            ATTR_TRANSACTIONS: self._transactions,     
+            ATTR_PAYMENTS: self._payments          
             }
 
     def update(self):
@@ -128,8 +133,10 @@ class SbankenSensor(Entity):
         """
         session = self.api.create_session()
         account = self.api.get_account(session, self._account['accountId'])
-        transactions = self.api.get_transactions(session, self._account["accountId"]) 
+        transactions = self.api.get_transactions(session, self._account["accountId"])
+        payments = self.api.get_payments(session, self._account["accountId"]) 
         self._transactions = transactions
+        self._payments = payments
         self._account = account
         self._state = account['available']
         _LOGGER.info("Updating Sbanken Sensors.")
@@ -194,4 +201,13 @@ class SbankenApi(object):
         if not response["isError"]:
             return response["items"]
         else:
-            raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))    
+            raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))   
+            
+    def get_payments(self, session, accountId):
+        response = session.get(
+            "https://publicapi.sbanken.no/apibeta/api/v1/Payments/" + accountId + '?length=' + self.config.get(CONF_NUMBER_OF_PAYMENTS)).json()
+    
+        if not response["isError"]:
+            return response["items"]
+        else:
+            raise RuntimeError("{} {}".format(response["errorType"], response["errorMessage"]))  
