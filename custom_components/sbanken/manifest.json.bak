@@ -1,7 +1,7 @@
 {
     "domain": "sbanken",
     "name": "Sbanken",
-    "version": "1.22",
+    "version": "1.21",
     "documentation": "https://github.com/sepodele/home-assistant-sbanken",
     "requirements": [],
     "dependencies": [],

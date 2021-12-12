@@ -111,7 +111,7 @@ class SbankenSensor(Entity):
         return 'mdi:cash'
 
     @property
-    def extra_state_attributes(self):
+    def device_state_attributes(self):
         """Return the state attributes."""
         return {
             ATTR_ACCOUNT_ID: self._account['accountId'], 
