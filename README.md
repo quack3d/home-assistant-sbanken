@@ -2,7 +2,9 @@
 
 This sensor platform uses the open API of the norwegian bank Sbanken. 
 
-Every account the customer has in the bank is created as sensor, and updated every 20 minutes. The last transactions will also be shown.
+Every account the customer has in the bank is created as sensor, and updated every 20 minutes. The last transactions will also be shown.+
+
+# THIS CUSTOM COMPONENT IS DEPRECATED. PLEASE USE https://github.com/toringer/home-assistant-sbanken WHICH IS NOW UPDATED AND CAN BE INSTALLED THROUGH HACS.
 
 ## Installation
 
